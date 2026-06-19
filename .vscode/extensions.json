@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-toolsai.jupyter",
+    "ms-toolsai.vscode-jupyter-cell-tags",
+    "muted Kirsten.vscode-animation",
+    "visualstudioexptteam.vscodeintellicode",
+    "usernamehw.errorlens",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "eamodio.gitlens",
+    "PKief.material-icon-theme",
+    "zhuangtongfa.material-theme",
+    "sdras.cat-vscode-dark-theme",
+    "bradgashler.ghost-token",
+    "christian-kohler.path-intellisense",
+    "christian-kohler.npm-intellisense"
+  ]
+}
