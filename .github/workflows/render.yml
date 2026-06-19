@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '**.py'
+      - '!requirements.txt'
   workflow_dispatch:
     inputs:
       scene:
@@ -15,7 +16,7 @@ on:
         required: false
         default: 'l'
       file:
-        description: 'Manim file'
+        description: 'Manim file (e.g., my_scene.py)'
         required: false
         default: 'scene_example.py'
 
@@ -31,15 +32,42 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg texlive-latex-extra texlive-fonts-extra cm-super dvipng
+
+      - name: Install Python dependencies
+        run: |
           pip install -r requirements.txt
 
-      - name: Render Manim scene
+      - name: Find scene file
+        id: find-file
         run: |
-          manim -q${{ github.events.inputs.quality || 'l' }} ${{ github.events.inputs.file || 'scene_example.py' }} ${{ github.events.inputs.scene || 'CircleToSquare' }}
+          # Find the most recently modified .py file (excluding example and this file)
+          FILE=$(git diff --name-only HEAD^..HEAD | grep '\.py$' | grep -v 'scene_example.py' | grep -v 'app.py' | head -1)
+          if [ -z "$FILE" ]; then
+            FILE="scene_example.py"
+          fi
+          echo "file=$FILE" >> $GITHUB_OUTPUT
+
+      - name: Extract scene name
+        id: find-scene
+        run: |
+          FILE="${{ steps.find-file.outputs.file }}"
+          # Find Scene class name
+          SCENE=$(grep -oP 'class\s+\K[A-Z][a-zA-Z0-9]*(?=.*Scene)' "$FILE" | head -1)
+          if [ -z "$SCENE" ]; then
+            SCENE="Scene"
+          fi
+          echo "scene=$SCENE" >> $GITHUB_OUTPUT
+
+      - name: Render Manim
+        run: |
+          FILE="${{ steps.find-file.outputs.file }}"
+          SCENE="${{ steps.find-scene.outputs.scene }}"
+          echo "Rendering: $FILE -> $SCENE"
+          manim -ql "$FILE" "$SCENE" --progress_bar none
 
       - name: Upload video
         uses: actions/upload-artifact@v4

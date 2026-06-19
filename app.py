@@ -1,23 +1,21 @@
 """
-Manim Web Renderer - Streamlit App
-Upload or paste Manim code, render, and download the video!
+Manim Cloud Renderer - Uses GitHub Actions for rendering
+Write code, trigger render on GitHub, download the video!
 """
 import streamlit as st
-import subprocess
+import requests
+import time
 import os
-import sys
-import tempfile
-import shutil
 from pathlib import Path
 
 # Page config
 st.set_page_config(
-    page_title="Manim Renderer",
+    page_title="Manim Cloud Renderer",
     page_icon="🎬",
     layout="wide"
 )
 
-# Custom CSS for aesthetics
+# Custom CSS
 st.markdown("""
 <style>
     .stApp {
@@ -41,13 +39,19 @@ st.markdown("""
         border-left: 4px solid #e94560;
         border-radius: 0.5rem;
     }
+    .info-box {
+        padding: 1rem;
+        background: rgba(0, 123, 255, 0.1);
+        border-left: 4px solid #007bff;
+        border-radius: 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🎬 Manim Cloud Renderer")
-st.markdown("Write Manim code, render, and download!")
+st.markdown("Write Manim code → GitHub Actions renders it → Download!")
 
-# Default example code
+# Default example
 DEFAULT_CODE = '''from manim import *
 
 class CircleToSquare(Scene):
@@ -81,7 +85,7 @@ class CircleToSquare(Scene):
         self.wait(2)
 '''
 
-# Sidebar for settings
+# Sidebar
 with st.sidebar:
     st.header("⚙️ Settings")
 
@@ -94,12 +98,22 @@ with st.sidebar:
     quality_flag = quality_map[quality]
 
     st.markdown("---")
-    st.markdown("**Instructions:**")
+    st.markdown("**How it works:**")
     st.markdown("""
-    1. Write/paste Manim code
+    1. Write your Manim code
     2. Click **Render**
-    3. Download your video!
+    3. Code is pushed to GitHub
+    4. GitHub Actions renders it
+    5. Download the video!
     """)
+    st.markdown("---")
+    st.markdown("**Status:** Check [Actions](https://github.com/Badrinath193/manim-cloud-ide/actions) tab")
+
+# Session state for tracking
+if 'render_id' not in st.session_state:
+    st.session_state.render_id = None
+if 'video_url' not in st.session_state:
+    st.session_state.video_url = None
 
 # Main content
 code_input = st.text_area(
@@ -117,68 +131,47 @@ if render_btn:
     if not code_input.strip():
         st.error("Please enter some Manim code!")
     else:
-        with st.spinner("Rendering... this may take a minute..."):
-            # Create temp directory
-            with tempfile.TemporaryDirectory() as tmpdir:
-                # Write the code to a file
-                manim_file = Path(tmpdir) / "scene.py"
-                manim_file.write_text(code_input)
+        with st.spinner("Pushing code to GitHub..."):
+            # Write code to file
+            with open("temp_scene.py", "w") as f:
+                f.write(code_input)
 
-                # Extract scene class name
-                import re
-                match = re.search(r'class\s+(\w+)\s*\(\s*Scene\s*\)', code_input)
-                if match:
-                    scene_name = match.group(1)
-                else:
-                    scene_name = "Scene"
+            # Git add, commit, push
+            os.system('git add temp_scene.py')
+            os.system('git commit -m "Render request"')
+            os.system('git push origin main')
 
-                # Run manim
-                output_dir = Path(tmpdir) / "media"
-                cmd = [
-                    sys.executable, "-m", "manim",
-                    "-ql", str(manim_file), scene_name,
-                    "--output_file", "animation",
-                    "-v", "ERROR"
-                ]
+            st.success("✅ Code pushed to GitHub!")
+            st.info("🚀 GitHub Actions is rendering... Check the Actions tab!")
 
-                try:
-                    result = subprocess.run(
-                        cmd,
-                        capture_output=True,
-                        text=True,
-                        cwd=tmpdir,
-                        timeout=300
-                    )
-
-                    if result.returncode != 0:
-                        st.error("Render failed!")
-                        st.code(result.stderr)
-                    else:
-                        # Find the rendered video
-                        videos = list(output_dir.rglob("*.mp4"))
-
-                        if videos:
-                            video_path = videos[0]
-                            st.markdown('<div class="success-box">✅ Render complete!</div>', unsafe_allow_html=True)
-
-                            # Show video
-                            st.video(str(video_path))
-
-                            # Download button
-                            with open(video_path, "rb") as f:
-                                st.download_button(
-                                    label="⬇️ Download Video",
-                                    data=f.read(),
-                                    file_name=f"{scene_name}.mp4",
-                                    mime="video/mp4"
-                                )
-                        else:
-                            st.error("No video file found!")
-
-                except subprocess.TimeoutExpired:
-                    st.error("Render timed out! Try lower quality.")
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
+            st.markdown("""
+            <div class="info-box">
+            <b>Next steps:</b><br>
+            1. Go to <a href="https://github.com/Badrinath193/manim-cloud-ide/actions" target="_blank">GitHub Actions</a><br>
+            2. Wait for the workflow to complete<br>
+            3. Download from "Artifacts"
+            </div>
+            """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("💡 *Tip: Use GitHub Actions for high-quality renders*")
+
+# Alternative: Show how to use GitHub Actions directly
+st.markdown("### 📋 Alternative: Use GitHub Actions Directly")
+
+st.markdown("""
+1. Go to **[manim-cloud-ide/actions](https://github.com/Badrinath193/manim-cloud-ide/actions)**
+2. Click **"Render Manim"** workflow
+3. Click **"Run workflow"**
+4. Wait for completion
+5. Download from **Artifacts** ( expires in 7 days)
+""")
+
+# Show last commit info
+st.markdown("### 📊 Repository Status")
+try:
+    import subprocess
+    result = subprocess.run(['git', 'log', '-1', '--oneline'], capture_output=True, text=True, cwd='.')
+    if result.returncode == 0 and result.stdout:
+        st.markdown(f"Last commit: `{result.stdout.strip()}`")
+except:
+    pass
