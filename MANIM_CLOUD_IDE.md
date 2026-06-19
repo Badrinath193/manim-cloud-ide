@@ -135,6 +135,39 @@ Click your profile → **Codespaces** → **Configure** to adjust.
 - Run `fc-cache -fv` to refresh font cache
 - The container includes Liberation and CMU fonts
 
+## Rendering & Downloading Videos
+
+### Option 1: GitHub Actions (Recommended for HQ)
+
+1. Push your `.py` file to the repository
+2. Go to **Actions** tab
+3. Run the **Render Manim** workflow
+4. Download the video from **Artifacts**
+
+Or manually trigger:
+```bash
+# Just push any .py file and the action runs automatically!
+git add new_scene.py
+git commit -m "Add new scene"
+git push
+```
+
+### Option 2: Streamlit Web App (Easiest Interface)
+
+Deploy to **Streamlit Cloud** for a beautiful web interface:
+
+1. Push `app.py` to your GitHub repo
+2. Go to **[share.streamlit.io](https://share.streamlit.io)**
+3. Sign in with GitHub
+4. Click **New app** → Select your repo → Select `app.py`
+5. Your Manim renderer is live!
+
+**Web App Features:**
+- Paste Manim code
+- Select quality
+- Click Render
+- Download video
+
 ## License
 
 MIT License - Feel free to use and modify!

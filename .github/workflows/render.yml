@@ -1,0 +1,49 @@
+name: Render Manim
+
+on:
+  push:
+    paths:
+      - '**.py'
+  workflow_dispatch:
+    inputs:
+      scene:
+        description: 'Scene class name to render'
+        required: false
+        default: 'CircleToSquare'
+      quality:
+        description: 'Quality (l/m/h/k)'
+        required: false
+        default: 'l'
+      file:
+        description: 'Manim file'
+        required: false
+        default: 'scene_example.py'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg texlive-latex-extra texlive-fonts-extra cm-super dvipng
+          pip install -r requirements.txt
+
+      - name: Render Manim scene
+        run: |
+          manim -q${{ github.events.inputs.quality || 'l' }} ${{ github.events.inputs.file || 'scene_example.py' }} ${{ github.events.inputs.scene || 'CircleToSquare' }}
+
+      - name: Upload video
+        uses: actions/upload-artifact@v4
+        with:
+          name: manim-output
+          path: media/**/*.mp4
+          retention-days: 7
